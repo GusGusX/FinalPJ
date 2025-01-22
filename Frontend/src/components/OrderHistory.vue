@@ -22,7 +22,7 @@
 
         <!-- รายละเอียดการสั่งซื้อ -->
         <div class="text-gray-700 text-sm space-y-2">
-          <p><strong>สินค้าที่สั่ง:</strong> {{ order.product }}</p>
+          <p><strong>สินค้าที่สั่ง:</strong> {{ order.product_name }}</p>
           <p><strong>ปริมาณที่สั่ง (กิโลกรัม):</strong> {{ order.quantity }}</p>
           <p><strong>ราคาที่สั่ง:</strong> ฿{{ order.price }}</p>
           <p><strong>ราคารวม:</strong> ฿{{ order.total_price }}</p>
@@ -50,14 +50,14 @@ export default {
   },
   methods: {
     async fetchOrderHistory() {
-      try {
-        const response = await axios.get("http://localhost:8888/order-history");
-        this.orderHistory = response.data; // เก็บข้อมูลในตัวแปร orderHistory
-      } catch (error) {
-        console.error("Error fetching order history:", error);
-      }
-    },
-  },
+  try {
+    const response = await axios.get("http://192.168.0.108:8888/order-history");
+    this.orderHistory = response.data; // เก็บข้อมูลในตัวแปร orderHistory
+  } catch (error) {
+    console.error("Error fetching order history:", error);
+  }
+ },
+},
 };
 </script>
 
