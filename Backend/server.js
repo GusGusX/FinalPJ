@@ -1,6 +1,7 @@
 const express = require('express')
 const axios = require('axios')
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 const mysql = require('mysql2');
 require('dotenv').config()
 
@@ -29,68 +30,21 @@ db.connect((err) => {
     console.log('Connected to the MySQL database');
   }
 });
+
 //Api connect Frontend
-app.post("/orders", (req, res) => {
-  const { cart, totalPrice } = req.body;
 
-  // เพิ่มคำสั่งซื้อใหม่
-  const insertOrderQuery = "INSERT INTO orders (total_price) VALUES (?)";
-  db.query(insertOrderQuery, [totalPrice], (err, result) => {
-    if (err) {
-      return res.status(500).json({ success: false, message: "Error saving order", error: err });
-    }
-
-    const orderId = result.insertId;
-
-    // เพิ่มสินค้าลงในคำสั่งซื้อ
-    const orderDetailsQuery = `
-      INSERT INTO order_details (order_id, product_id, quantity, price)
-      VALUES ?`;
-    const orderDetailsData = cart.map((item) => [orderId, item.id, item.quantity, item.price]);
-
-    db.query(orderDetailsQuery, [orderDetailsData], (err) => {
-      if (err) {
-        return res.status(500).json({ success: false, message: "Error saving order details", error: err });
-      }
-
-      res.status(201).json({ success: true, orderId });
-    });
-  });
-});
-
-app.get("/orders", (req, res) => {
-  const query = `
-    SELECT o.id AS orderId, o.total_price, o.created_at,
-           od.product_id, od.quantity, od.price, p.product_name
-    FROM orders o
-    JOIN order_details od ON o.id = od.order_id
-    JOIN products p ON od.product_id = p.id
-    ORDER BY o.created_at DESC`;
-
+app.get('/orders', (req, res) => {
+  const query = 'SELECT * FROM orders'; // แก้ไข query ตามตารางของคุณ
   db.query(query, (err, results) => {
     if (err) {
-      return res.status(500).json({ success: false, message: "Error fetching orders", error: err });
+      console.error('Error fetching orders:', err);
+      res.status(500).send('Database error');
+      return;
     }
-
-    const orders = results.reduce((acc, row) => {
-      const { orderId, total_price, created_at, product_id, quantity, price, product_name } = row;
-
-      if (!acc[orderId]) {
-        acc[orderId] = {
-          orderId,
-          total_price,
-          created_at,
-          items: [],
-        };
-      }
-
-      acc[orderId].items.push({ product_id, product_name, quantity, price });
-      return acc;
-    }, {});
-
-    res.json(Object.values(orders));
+    res.json(results);
   });
 });
+
 
 app.get("/products", (req, res) => {
   const query = 'SELECT * FROM products';
@@ -103,69 +57,72 @@ app.get("/products", (req, res) => {
   });
 });
 
-app.post("/checkout", (req, res) => {
-  const { cart } = req.body; // รับข้อมูลตะกร้าสินค้าจาก Frontend
-  if (!cart || cart.length === 0) {
-    return res.status(400).send("Cart is empty.");
+app.post("/orders", (req, res) => {
+  const { customer_name, phone, address, items } = req.body;
+
+  if (!customer_name || !phone || !address || !items || items.length === 0) {
+    return res.status(400).send("ข้อมูลไม่ครบถ้วน");
   }
 
-  const totalPrice = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-
-  // สร้างคำสั่งซื้อในตาราง `orders`
-  const orderQuery = "INSERT INTO orders (total_price) VALUES (?)";
-  db.query(orderQuery, [totalPrice], (err, result) => {
+  // บันทึกคำสั่งซื้อในตาราง orders
+  const orderQuery = `INSERT INTO orders (customer_name, phone, address) VALUES (?, ?, ?)`;
+  db.query(orderQuery, [customer_name, phone, address], (err, result) => {
     if (err) {
-      return res.status(500).send("Failed to create order.");
+      console.error("Error inserting order:", err);
+      return res.status(500).send("Error saving order");
     }
 
-    const orderId = result.insertId; // รหัสคำสั่งซื้อที่เพิ่งสร้าง
+    const orderId = result.insertId;
 
-    // สร้างรายการในตาราง `order_details`
-    const orderDetailsQuery = `
-      INSERT INTO order_details (order_id, product_id, quantity, price)
-      VALUES ?`;
-
-    const orderDetails = cart.map(item => [
-      orderId, // รหัสคำสั่งซื้อ
-      item.id, // รหัสสินค้า
-      item.quantity, // จำนวนสินค้า
-      item.price // ราคาต่อหน่วย
-    ]);
-
-    db.query(orderDetailsQuery, [orderDetails], (err) => {
-      if (err) {
-        return res.status(500).send("Failed to create order details.");
-      }
-      res.status(201).send({ message: "Order placed successfully", orderId });
+    // บันทึกรายการสินค้าใน order_items
+    const itemQueries = items.map((item) => {
+      return new Promise((resolve, reject) => {
+        const itemQuery = `INSERT INTO order_items (order_id, product_id, product_name, price, quantity) VALUES (?, ?, ?, ?, ?)`;
+        db.query(
+          itemQuery,
+          [orderId, item.product_id, item.product_name, item.price, item.quantity],
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
     });
+
+    // รอให้บันทึกสินค้าทั้งหมดเสร็จ
+    Promise.all(itemQueries)
+      .then(() => {
+        res.status(201).send("คำสั่งซื้อสำเร็จ");
+      })
+      .catch((err) => {
+        console.error("Error inserting order items:", err);
+        res.status(500).send("Error saving order items");
+      });
   });
 });
 
-app.get("/order-history", (req, res) => {
-  const query = `
-    SELECT 
-      o.order_id, 
-      o.total_price, 
-      o.created_at, 
-      od.product_id, 
-      od.quantity, 
-      od.price, 
-      p.product_name
-    FROM orders o
-    JOIN order_details od ON o.order_id = od.order_id
-    JOIN products p ON od.product_id = p.product_id
-    ORDER BY o.created_at DESC`;
-
-  db.query(query, (err, results) => {
-    if (err) {
-      return res.status(500).send("Failed to fetch order history.");
-    }
-    res.json(results);
-  });
-});
 
 // linezone
 
+app.post('/verify-token', (req, res) => {
+  const { idToken } = req.body;
+  
+  try {
+    // ตรวจสอบ Signature และ Decode Token
+    const decoded = jwt.verify(idToken, process.env.LINE_CHANNEL_SECRET, {
+      algorithms: ['HS256'],
+      audience: process.env.LINE_CHANNEL_ID,
+      issuer: 'https://access.line.me',
+    });
+
+    console.log('Decoded Token:', decoded);
+    res.status(200).json({ success: true, user: decoded });
+
+  } catch (error) {
+    console.error('JWT Verification Error:', error);
+    res.status(400).json({ success: false, error: 'Invalid Token' });
+  }
+});
 const headers = {
   'content-Type': 'application/json',
   'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`
@@ -251,6 +208,8 @@ app.post("/webhook", async (req, res) => {
     console.log('error', error.response)
   }
 })
+
+
 
 app.listen(PORT, (req, res) => {
   console.log(`Express app listening at http://localhost:${PORT}`);

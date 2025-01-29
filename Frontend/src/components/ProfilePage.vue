@@ -3,13 +3,13 @@
     <h1 class="text-2xl sm:text-3xl font-bold mb-8 text-center sm:text-left">โปรไฟล์ผู้ใช้งาน</h1>
     <div class="flex flex-col items-center sm:flex-row sm:items-start mb-6">
       <img
-        src="https://via.placeholder.com/80"
+        :src="user.pictureUrl || ''"
         alt="User Avatar"
         class="rounded-full border mb-4 sm:mb-0 sm:mr-4"
         width="80"
         height="80"
       />
-      <h2 class="text-lg sm:text-xl font-semibold">ผู้ใช้งาน</h2>
+      <h2 class="text-lg sm:text-xl font-semibold">{{ user.displayName || 'ผู้ใช้งาน' }}</h2>
     </div>
     <div class="bg-gray-100 rounded-lg shadow-lg p-4 sm:p-6">
       <form @submit.prevent="handleSubmit">
@@ -79,19 +79,53 @@
 </template>
 
 <script>
+import liff from '@line/liff';
+
 export default {
   name: "ProfilePage",
   data() {
     return {
       user: {
-        firstName: "อัง-มิน",
-        lastName: "ชอน",
-        address: "1 ม.1 อ.เมือง ต.อิสาณ จ.บุรีรัมย์",
-        phone: "0935722000",
+        displayName: "", // ชื่อที่ได้จาก LIFF
+        pictureUrl: "", // URL รูปภาพจาก LIFF
+        firstName: "", // ชื่อ
+        lastName: "", // นามสกุล
+        address: "", // ที่อยู่
+        phone: "", // เบอร์โทร
       },
     };
   },
+  async created() {
+    await this.initializeLiff();
+  },
   methods: {
+    async initializeLiff() {
+      try {
+        // Initialize LIFF
+        await liff.init({ liffId: '2006452709-NJ2Qkk3o' }); // ใส่ LIFF ID ของคุณตรงนี้
+
+        // ตรวจสอบการ Login
+        if (!liff.isLoggedIn()) {
+          liff.login(); // ถ้ายังไม่ล็อกอิน ให้ล็อกอิน
+          return;
+        }
+
+        // ดึงข้อมูลโปรไฟล์ผู้ใช้
+        const profile = await liff.getProfile();
+
+        // นำข้อมูลโปรไฟล์มาใส่ใน user
+        this.user.displayName = profile.displayName;
+        this.user.pictureUrl = profile.pictureUrl;
+
+        // แยกชื่อและนามสกุลจาก displayName (ถ้ามี)
+        const nameParts = profile.displayName.split(' ');
+        this.user.firstName = nameParts[0] || '';
+        this.user.lastName = nameParts.slice(1).join(' ') || '';
+
+      } catch (error) {
+        console.error('LIFF Error:', error);
+      }
+    },
     handleSubmit() {
       alert("บันทึกข้อมูลสำเร็จ!");
       console.log(this.user);

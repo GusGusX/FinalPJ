@@ -43,7 +43,7 @@ export default {
   async mounted() {
     // ดึงข้อมูลเนื้อสัตว์จาก API
     try {
-      const response = await axios.get("http://192.168.0.108:8888/products");
+      const response = await axios.get("http://192.168.0.110:8888/products");
       this.products = response.data;
     } catch (error) {
       console.error("Error fetching products:", error);

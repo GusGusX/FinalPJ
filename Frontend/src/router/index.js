@@ -4,6 +4,9 @@ import OrderHistory from '../components/OrderHistory.vue';
 import Home from '../components/Home.vue';
 import ProfilePage from '../components/ProfilePage.vue';
 import Stock from '../components/Stock.vue';
+import CheckoutPage from '../components/CheckoutPage.vue'
+//import LiffLogin from '../components/LiffLogin.vue'
+
 const routes = [
   { path: "/Stock",
     name: "Stock",
@@ -12,8 +15,8 @@ const routes = [
   {
     path: '/Order-Page',
     name: 'OrderPage',
-    component: OrderPage, // หน้า OrderPage
-  },
+    component: OrderPage },
+
   { path: "/",
     name: "Home",
     component: Home },
@@ -25,6 +28,16 @@ const routes = [
   { path: '/profile',
     name: 'Profile',
     component: ProfilePage },
+
+    {
+      path: "/checkout",
+      name: "CheckoutPage",
+      component: CheckoutPage, },
+
+      // {
+      //   path: "/Home",
+      //   name: "LiffLogin",
+      //   component: LiffLogin, },
 ];
 
 
