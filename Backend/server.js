@@ -33,17 +33,59 @@ db.connect((err) => {
 
 //Api connect Frontend
 
-app.get('/orders', (req, res) => {
-  const query = 'SELECT * FROM orders'; // แก้ไข query ตามตารางของคุณ
+app.get("/orders", (req, res) => {
+  const query = `
+    SELECT 
+      o.order_id,
+      o.customer_name,
+      o.phone,
+      o.address,
+      o.order_date,
+      o.total_price,
+      GROUP_CONCAT(
+        CONCAT(
+          oi.product_id, '|', 
+          oi.product_name, '|', 
+          oi.price, '|', 
+          oi.quantity, '|',
+          oi.subtotal
+        ) SEPARATOR ';'
+      ) AS items
+    FROM orders o
+    JOIN order_items oi ON o.order_id = oi.order_id
+    GROUP BY o.order_id
+    ORDER BY o.order_date DESC
+  `;
+
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching orders:', err);
-      res.status(500).send('Database error');
-      return;
+      console.error("Error fetching orders:", err);
+      return res.status(500).send("Database error");
     }
+
+    // แปลง items จาก string เป็น array ของ object
+    results.forEach((order) => {
+      if (order.items) {
+        order.items = order.items.split(";").map((item) => {
+          const [product_id, product_name, price, quantity, subtotal] = item.split("|");
+          return {
+            product_id: parseInt(product_id),
+            product_name,
+            price: parseFloat(price),
+            quantity: parseInt(quantity),
+            subtotal: parseFloat(subtotal),
+          };
+        });
+      } else {
+        order.items = [];
+      }
+    });
+
     res.json(results);
   });
 });
+
+
 
 
 app.get("/products", (req, res) => {
@@ -57,49 +99,79 @@ app.get("/products", (req, res) => {
   });
 });
 
-app.post("/orders", (req, res) => {
-  const { customer_name, phone, address, items } = req.body;
+app.post("/orders", async (req, res) => {
+  const { customer_name, phone, address, items, total_price } = req.body;
 
+  // ตรวจสอบข้อมูลที่ส่งมา
   if (!customer_name || !phone || !address || !items || items.length === 0) {
     return res.status(400).send("ข้อมูลไม่ครบถ้วน");
   }
 
-  // บันทึกคำสั่งซื้อในตาราง orders
-  const orderQuery = `INSERT INTO orders (customer_name, phone, address) VALUES (?, ?, ?)`;
-  db.query(orderQuery, [customer_name, phone, address], (err, result) => {
+  // ตรวจสอบ subtotal ในแต่ละรายการสินค้า
+  for (const item of items) {
+    if (item.subtotal === undefined || item.subtotal === null) {
+      return res.status(400).send("subtotal ไม่ถูกต้อง");
+    }
+  }
+
+  // เริ่ม transaction
+  db.beginTransaction(async (err) => {
     if (err) {
-      console.error("Error inserting order:", err);
-      return res.status(500).send("Error saving order");
+      console.error("Transaction error:", err);
+      return res.status(500).send("Transaction error");
     }
 
-    const orderId = result.insertId;
+    try {
+      // 1. บันทึกคำสั่งซื้อในตาราง orders
+      const orderQuery = `
+        INSERT INTO orders (customer_name, phone, address, total_price)
+        VALUES (?, ?, ?, ?)
+      `;
+      const [orderResult] = await db.promise().query(orderQuery, [
+        customer_name,
+        phone,
+        address,
+        total_price,
+      ]);
+      const orderId = orderResult.insertId;
 
-    // บันทึกรายการสินค้าใน order_items
-    const itemQueries = items.map((item) => {
-      return new Promise((resolve, reject) => {
-        const itemQuery = `INSERT INTO order_items (order_id, product_id, product_name, price, quantity) VALUES (?, ?, ?, ?, ?)`;
-        db.query(
-          itemQuery,
-          [orderId, item.product_id, item.product_name, item.price, item.quantity],
-          (err) => {
-            if (err) reject(err);
-            else resolve();
-          }
+      // 2. บันทึกรายการสินค้าใน order_items
+      for (const item of items) {
+        await db.promise().query(
+          "INSERT INTO order_items (order_id, product_id, product_name, price, quantity, subtotal) VALUES (?, ?, ?, ?, ?, ?)",
+          [orderId, item.product_id, item.product_name, item.price, item.quantity, item.subtotal]
         );
-      });
-    });
 
-    // รอให้บันทึกสินค้าทั้งหมดเสร็จ
-    Promise.all(itemQueries)
-      .then(() => {
-        res.status(201).send("คำสั่งซื้อสำเร็จ");
-      })
-      .catch((err) => {
-        console.error("Error inserting order items:", err);
-        res.status(500).send("Error saving order items");
+        // 3. อัปเดตสต็อกสินค้า
+        await db.promise().query(
+          "UPDATE products SET quantity = quantity - ? WHERE product_id = ?",
+          [item.quantity, item.product_id]
+        );
+      }
+
+      // 4. Commit transaction
+      db.commit((err) => {
+        if (err) {
+          console.error("Transaction commit error:", err);
+          return res.status(500).send("Transaction commit error");
+        }
+        res.status(201).json({
+          success: true,
+          message: "คำสั่งซื้อสำเร็จ และอัปเดตสต็อกสินค้าแล้ว",
+          orderId,
+          total_price,
+        });
       });
+    } catch (error) {
+      // หากเกิดข้อผิดพลาด Rollback transaction
+      db.rollback(() => {
+        console.error("Transaction rollback due to error:", error.message);
+        res.status(500).send(error.message);
+      });
+    }
   });
 });
+
 
 
 // linezone

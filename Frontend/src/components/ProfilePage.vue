@@ -1,75 +1,65 @@
 <template>
-  <div class="profile-page p-4 sm:p-8">
-    <h1 class="text-2xl sm:text-3xl font-bold mb-8 text-center sm:text-left">โปรไฟล์ผู้ใช้งาน</h1>
+  <div class="profile-page p-4 sm:p-8 bg-gray-50 min-h-screen">
+    <h1 class="text-2xl sm:text-3xl font-bold mb-8 text-center sm:text-left text-green-600">โปรไฟล์ผู้ใช้งาน</h1>
     <div class="flex flex-col items-center sm:flex-row sm:items-start mb-6">
       <img
-        :src="user.pictureUrl || ''"
+        :src="user.pictureUrl"
         alt="User Avatar"
-        class="rounded-full border mb-4 sm:mb-0 sm:mr-4"
+        class="rounded-full border-4 border-green-500 mb-4 sm:mb-0 sm:mr-4"
         width="80"
         height="80"
       />
-      <h2 class="text-lg sm:text-xl font-semibold">{{ user.displayName || 'ผู้ใช้งาน' }}</h2>
+      <h2 class="text-lg sm:text-xl font-semibold text-gray-800">{{ user.displayName || 'ผู้ใช้งาน' }}</h2>
     </div>
-    <div class="bg-gray-100 rounded-lg shadow-lg p-4 sm:p-6">
+    <div class="bg-white rounded-lg shadow-lg p-4 sm:p-6">
       <form @submit.prevent="handleSubmit">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="block text-gray-700 font-medium mb-2">ชื่อ:</label>
-            <div class="flex items-center bg-white p-2 rounded-md border">
-              <input
-                v-model="user.firstName"
-                type="text"
-                class="flex-1 outline-none text-gray-800"
-              />
-              <button type="button" class="text-gray-500 hover:text-blue-500">
-                ✏️
-              </button>
-            </div>
-          </div>
-          <div>
-            <label class="block text-gray-700 font-medium mb-2">นามสกุล:</label>
-            <div class="flex items-center bg-white p-2 rounded-md border">
-              <input
-                v-model="user.lastName"
-                type="text"
-                class="flex-1 outline-none text-gray-800"
-              />
-              <button type="button" class="text-gray-500 hover:text-blue-500">
-                ✏️
-              </button>
-            </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 font-medium mb-2">ชื่อ:</label>
+          <div class="flex items-center bg-gray-100 p-2 rounded-md border border-gray-200">
+            <input
+              v-model="user.firstName"
+              type="text"
+              class="flex-1 outline-none text-gray-800 bg-transparent"
+              :readonly="!isEditing"
+            />
+            <button type="button" class="text-gray-500 hover:text-green-600" @click="toggleEdit">
+              {{ isEditing ? '💾' : '✏️' }}
+            </button>
           </div>
         </div>
         <div class="mb-4">
           <label class="block text-gray-700 font-medium mb-2">ที่อยู่:</label>
-          <div class="flex items-center bg-white p-2 rounded-md border">
+          <div class="flex items-center bg-gray-100 p-2 rounded-md border border-gray-200">
             <input
               v-model="user.address"
               type="text"
-              class="flex-1 outline-none text-gray-800"
+              class="flex-1 outline-none text-gray-800 bg-transparent"
+              :readonly="!isEditing"
             />
-            <button type="button" class="text-gray-500 hover:text-blue-500">
-              ✏️
+            <button type="button" class="text-gray-500 hover:text-green-600" @click="toggleEdit">
+              {{ isEditing ? '💾' : '✏️' }}
             </button>
           </div>
         </div>
         <div class="mb-4">
           <label class="block text-gray-700 font-medium mb-2">เบอร์โทร:</label>
-          <div class="flex items-center bg-white p-2 rounded-md border">
+          <div class="flex items-center bg-gray-100 p-2 rounded-md border border-gray-200">
             <input
               v-model="user.phone"
               type="text"
-              class="flex-1 outline-none text-gray-800"
+              class="flex-1 outline-none text-gray-800 bg-transparent"
+              :readonly="!isEditing"
             />
-            <button type="button" class="text-gray-500 hover:text-blue-500">
-              ✏️
+            <button type="button" class="text-gray-500 hover:text-green-600" @click="toggleEdit">
+              {{ isEditing ? '💾' : '✏️' }}
             </button>
           </div>
         </div>
         <button
           type="submit"
           class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md w-full"
+          :class="{ 'opacity-50 cursor-not-allowed': !isEditing }"
+          :disabled="!isEditing"
         >
           ยืนยันแก้ไขข้อมูล
         </button>
@@ -89,10 +79,10 @@ export default {
         displayName: "", // ชื่อที่ได้จาก LIFF
         pictureUrl: "", // URL รูปภาพจาก LIFF
         firstName: "", // ชื่อ
-        lastName: "", // นามสกุล
         address: "", // ที่อยู่
         phone: "", // เบอร์โทร
       },
+      isEditing: false, // สถานะการแก้ไข
     };
   },
   async created() {
@@ -117,18 +107,22 @@ export default {
         this.user.displayName = profile.displayName;
         this.user.pictureUrl = profile.pictureUrl;
 
-        // แยกชื่อและนามสกุลจาก displayName (ถ้ามี)
-        const nameParts = profile.displayName.split(' ');
-        this.user.firstName = nameParts[0] || '';
-        this.user.lastName = nameParts.slice(1).join(' ') || '';
+        // ใช้ชื่อจาก displayName เป็น firstName
+        this.user.firstName = profile.displayName || '';
 
       } catch (error) {
         console.error('LIFF Error:', error);
       }
     },
+    toggleEdit() {
+      this.isEditing = !this.isEditing;
+    },
     handleSubmit() {
-      alert("บันทึกข้อมูลสำเร็จ!");
-      console.log(this.user);
+      if (this.isEditing) {
+        alert("บันทึกข้อมูลสำเร็จ!");
+        console.log('ข้อมูลที่บันทึก:', this.user);
+        this.isEditing = false;
+      }
     },
   },
 };

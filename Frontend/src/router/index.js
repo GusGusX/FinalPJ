@@ -5,7 +5,7 @@ import Home from '../components/Home.vue';
 import ProfilePage from '../components/ProfilePage.vue';
 import Stock from '../components/Stock.vue';
 import CheckoutPage from '../components/CheckoutPage.vue'
-//import LiffLogin from '../components/LiffLogin.vue'
+import LiffLogin from '../components/LiffLogin.vue'
 
 const routes = [
   { path: "/Stock",
@@ -17,7 +17,7 @@ const routes = [
     name: 'OrderPage',
     component: OrderPage },
 
-  { path: "/",
+  { path: "/Home",
     name: "Home",
     component: Home },
 
@@ -34,10 +34,10 @@ const routes = [
       name: "CheckoutPage",
       component: CheckoutPage, },
 
-      // {
-      //   path: "/Home",
-      //   name: "LiffLogin",
-      //   component: LiffLogin, },
+      {
+        path: "/",
+        name: "LiffLogin",
+        component: LiffLogin, },
 ];
 
 

@@ -125,9 +125,11 @@ export default {
           product_id: item.id,
           product_name: item.name,
           price: item.price,
-          quantity: item.quantity
-        }))
-      };
+          quantity: item.quantity,
+          subtotal: item.price * item.quantity // คำนวณ subtotal
+   })),
+   total_price: this.cart.reduce((total, item) => total + item.price * item.quantity, 0) // คำนวณ total_price
+};
 
       console.log(orderData);  // ตรวจสอบค่าที่จะส่งไปใน `orderData`
 
@@ -142,7 +144,7 @@ export default {
           if (response.ok) {
             alert("สั่งซื้อสำเร็จ");
             localStorage.removeItem("cart");
-            this.$router.push("/");
+            this.$router.push("/Home");
           } else {
             alert("เกิดข้อผิดพลาด");
           }
