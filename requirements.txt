@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "express": "^4.18.2",         // สำหรับ Express
+    "mysql2": "^3.2.0",           // สำหรับ MySQL
+    "dotenv": "^16.0.3",          // สำหรับจัดการ environment variables
+    "cors": "^2.8.5",             // สำหรับ CORS
+    "axios": "^1.6.5",            // สำหรับทำ HTTP requests
+    "@line/liff": "^2.23.0",      // สำหรับ LINE LIFF SDK
+    "nodemon": "^2.0.20"          // สำหรับใช้ในการพัฒนา (auto-reload server)
+  }
+}
