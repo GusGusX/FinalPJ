@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-5xl mx-auto p-4 sm:p-8 bg-white rounded-xl shadow-lg mt-8">
-    <h1 class="text-3xl font-bold text-center text-orange-600 mb-6">🛒 สรุปรายการสั่งซื้อ</h1>
+    <h1 class="text-3xl font-bold text-center text-orange-600 mb-6">สรุปรายการสั่งซื้อ</h1>
 
     <!-- 🟡 สินค้าในตะกร้า -->
     <div class="mb-8">
@@ -35,32 +35,72 @@
       </div>
     </div>
 
-    <!-- 📝 ฟอร์มกรอกข้อมูล -->
+    <!-- ฟอร์มกรอกข้อมูล -->
     <form @submit.prevent="submitOrder" class="space-y-6 bg-gray-50 p-6 rounded-lg shadow-inner">
       <h2 class="text-2xl font-semibold text-gray-800 mb-4">ข้อมูลผู้สั่งซื้อ</h2>
 
       <div class="space-y-4">
         <div>
-          <label class="block text-lg font-medium text-gray-700">👤 ชื่อผู้สั่งซื้อ:</label>
+          <label class="block text-lg font-medium text-gray-700">ชื่อผู้สั่งซื้อ</label>
           <input v-model="customer_name" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500" placeholder="กรอกชื่อผู้สั่งซื้อ" />
         </div>
 
         <div>
-          <label class="block text-lg font-medium text-gray-700">📞 เบอร์โทร:</label>
-          <select v-model="phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500">
-            <option disabled value="">เลือกเบอร์โทร</option>
-            <option v-for="option in profilePhones" :key="option" :value="option">{{ option }}</option>
-          </select>
+          <label class="block text-lg font-medium text-gray-700">เบอร์โทร</label>
+          <input
+            list="phones"
+            v-model="phone"
+            placeholder="เลือกหรือกรอกเบอร์โทร"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500"
+          />
+          <datalist id="phones">
+            <option v-for="option in profilePhones" :key="option" :value="option" />
+          </datalist>
         </div>
 
         <div>
-          <label class="block text-lg font-medium text-gray-700">🏠 ที่อยู่จัดส่ง:</label>
-          <select v-model="address" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500">
-            <option disabled value="">เลือกที่อยู่</option>
-            <option v-for="option in profileAddresses" :key="option" :value="option">{{ option }}</option>
-          </select>
+          <label class="block text-lg font-medium text-gray-700">ที่อยู่จัดส่ง</label>
+          <input
+            list="addresses"
+            v-model="address"
+            placeholder="เลือกหรือกรอกที่อยู่จัดส่ง"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500"
+          />
+          <datalist id="addresses">
+            <option v-for="option in profileAddresses" :key="option" :value="option" />
+          </datalist>
         </div>
       </div>
+      <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-orange-200">
+        <label class="block text-lg font-semibold text-gray-800 mb-3">วิธีรับสินค้า</label>
+
+        <div class="flex flex-col sm:flex-row gap-4">
+          <!-- ✅ มารับเองที่ร้าน -->
+          <div
+            @click="toggleDelivery('pickup')"
+            class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 w-full sm:w-1/2"
+            :class="delivery_method === 'pickup' ? 'bg-orange-100 border-orange-500 shadow-sm' : 'border-gray-300 hover:bg-orange-50'"
+          >
+            <div class="w-5 h-5 border-2 rounded-full flex items-center justify-center" :class="delivery_method === 'pickup' ? 'border-orange-500' : 'border-gray-400'">
+              <div v-if="delivery_method === 'pickup'" class="w-3 h-3 bg-orange-500 rounded-full"></div>
+            </div>
+            <div class="text-gray-700 font-medium">มารับเองที่ร้าน</div>
+          </div>
+
+          <!-- ✅ จัดส่งผ่านแกร๊ป -->
+          <div
+            @click="toggleDelivery('delivery')"
+            class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 w-full sm:w-1/2"
+            :class="delivery_method === 'delivery' ? 'bg-orange-100 border-orange-500 shadow-sm' : 'border-gray-300 hover:bg-orange-50'"
+          >
+            <div class="w-5 h-5 border-2 rounded-full flex items-center justify-center" :class="delivery_method === 'delivery' ? 'border-orange-500' : 'border-gray-400'">
+              <div v-if="delivery_method === 'delivery'" class="w-3 h-3 bg-orange-500 rounded-full"></div>
+            </div>
+            <div class="text-gray-700 font-medium">ให้ร้านจัดส่ง</div>
+          </div>
+        </div>
+      </div>
+
 
       <!-- ✅ สรุปคำสั่งซื้อ -->
       <div class="bg-orange-50 p-4 rounded-lg shadow-md">
@@ -92,6 +132,7 @@ export default {
       address: "",
       cart: JSON.parse(localStorage.getItem("cart")) || [],
       user_id: "",
+      delivery_method: "",
       profilePhones: [],
       profileAddresses: []
     };
@@ -102,38 +143,52 @@ export default {
     }
   },
   methods: {
-    async initLiff() {
-      try {
-        await liff.init({ liffId: import.meta.env.VITE_LIFF_ID });
 
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
+  getDeliveryLabel(method) {
+  return method === 'pickup'
+    ? 'มารับเองที่ร้าน'
+    : method === 'delivery'
+    ? 'ให้ร้านจัดส่ง'
+    : 'ไม่ระบุ';
+  },
+  // ✅ ฟังก์ชันสำหรับสลับวิธีรับสินค้า
+  toggleDelivery(option) {
+    this.delivery_method = this.delivery_method === option ? "" : option;
+  },
 
-        const profile = await liff.getProfile();
-        this.user_id = profile.userId;
-        this.customer_name = profile.displayName;
+  // ✅ ฟังก์ชันโหลดข้อมูลจาก LIFF
+  async initLiff() {
+    try {
+      await liff.init({ liffId: import.meta.env.VITE_LIFF_ID });
 
-        // ✅ แก้การเรียก API พร้อม Error Handling
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/get-user/${profile.userId}`);
-
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.status} ${response.statusText}`);
-        }
-
-        const userData = await response.json();
-        console.log("📋 ข้อมูลผู้ใช้จาก API:", userData);
-
-        // ✅ อัปเดตข้อมูลเบอร์โทรและที่อยู่
-        this.profilePhones = userData.phone ? [userData.phone] : ["ไม่มีข้อมูลเบอร์โทร"];
-        this.profileAddresses = userData.address ? [userData.address] : ["ไม่มีข้อมูลที่อยู่"];
-
-      } catch (error) {
-        console.error("🚫 LIFF Initialization Error:", error);
-        alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
       }
-    },
+
+      const profile = await liff.getProfile();
+      this.user_id = profile.userId;
+      this.customer_name = profile.displayName;
+
+      // ✅ เรียก API
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/get-user/${profile.userId}`);
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const userData = await response.json();
+      console.log("ข้อมูลผู้ใช้จาก API:", userData);
+
+      // ✅ อัปเดตข้อมูลเบอร์โทรและที่อยู่
+      this.profilePhones = userData.phone ? [userData.phone] : ["ไม่มีข้อมูลเบอร์โทร"];
+      this.profileAddresses = userData.address ? [userData.address] : ["ไม่มีข้อมูลที่อยู่"];
+
+    } catch (error) {
+      console.error("LIFF Initialization Error:", error);
+      alert(`เกิดข้อผิดพลาด: ${error.message}`);
+    }
+  },
 
     goBack() {
       window.history.back();
@@ -145,21 +200,34 @@ export default {
     },
 
     async submitOrder() {
-      if (this.cart.length === 0) {
-        alert("ไม่มีสินค้าในตะกร้า");
-        return;
-      }
+  if (this.cart.length === 0) {
+    alert("ไม่มีสินค้าในตะกร้า");
+    return;
+  }
 
-      if (!this.customer_name || !this.phone.trim() || !this.address.trim()) {
-        alert("กรุณากรอกข้อมูลให้ครบถ้วน (ชื่อ, เบอร์โทร, ที่อยู่)");
-        return;
-      }
+  if (!this.customer_name || !this.phone.trim() || !this.address.trim()) {
+    alert("กรุณากรอกข้อมูลให้ครบถ้วน (ชื่อ, เบอร์โทร, ที่อยู่)");
+    return;
+  }
+
+  // ✅ ตรวจสอบเบอร์โทร
+  if (!/^\d{9,10}$/.test(this.phone)) {
+    alert("กรุณากรอกเบอร์โทรให้ถูกต้อง (9-10 หลัก)");
+    return;
+  }
+
+  // ✅ ตรวจสอบวิธีจัดส่ง
+  if (!this.delivery_method) {
+    alert("กรุณาเลือกวิธีรับสินค้า");
+    return;
+  }
 
       const orderData = {
         user_id: this.user_id,
         customer_name: this.customer_name,
         phone: this.phone,
         address: this.address,
+        delivery_method: this.delivery_method,
         items: this.cart.map(item => ({
           product_id: item.id,
           product_name: item.name,
@@ -170,7 +238,7 @@ export default {
         total_price: this.totalAmount
       };
 
-      console.log("📦 ส่งข้อมูลคำสั่งซื้อ:", orderData);
+      console.log("ส่งข้อมูลคำสั่งซื้อ:", orderData);
 
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/orders`, {
@@ -182,18 +250,19 @@ export default {
         const result = await response.json();
 
         if (response.ok && result.success) {
-          console.log("✅ Order Saved Successfully", result);
+          console.log("Order Saved Successfully", result);
           alert(result.message);
           localStorage.removeItem("cart");
           this.$router.push("/order-history");
         } else {
-          console.error("❌ เกิดข้อผิดพลาดจากเซิร์ฟเวอร์:", result);
-          alert(`❌ เกิดข้อผิดพลาด: ${result.message || "โปรดลองใหม่"}`);
+          console.error("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์:", result);
+          alert(`เกิดข้อผิดพลาด: ${result.message || "โปรดลองใหม่"}`);
         }
       } catch (error) {
         console.error("🚫 Error submitting order:", error);
-        alert("❌ ไม่สามารถสั่งซื้อได้");
+        alert("ไม่สามารถสั่งซื้อได้");
       }
+
     }
   },
   mounted() {

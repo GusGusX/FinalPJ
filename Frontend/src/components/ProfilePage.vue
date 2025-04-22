@@ -30,7 +30,7 @@
 
         <!-- Display Name (Non-editable) -->
         <div class="mb-4">
-          <label class="block text-gray-700 font-medium mb-2">ชื่อ (จาก LINE):</label>
+          <label class="block text-gray-700 font-medium mb-2">ชื่อLINE:</label>
           <div class="bg-gray-100 p-2 rounded-md border border-gray-300 text-gray-800 shadow-inner">
             {{ user.displayName }}
           </div>
@@ -38,7 +38,7 @@
 
         <!-- Address -->
         <div class="mb-4">
-          <label class="block text-gray-700 font-medium mb-2">📍 ที่อยู่:</label>
+          <label class="block text-gray-700 font-medium mb-2">ที่อยู่:</label>
           <div class="flex items-center bg-gray-100 p-2 rounded-md border border-gray-300">
             <input
               v-model="user.address"
@@ -55,7 +55,7 @@
 
         <!-- Phone -->
         <div class="mb-4">
-          <label class="block text-gray-700 font-medium mb-2">📞 เบอร์โทร:</label>
+          <label class="block text-gray-700 font-medium mb-2">เบอร์โทร:</label>
           <div class="flex items-center bg-gray-100 p-2 rounded-md border border-gray-300">
             <input
               v-model="user.phone"
@@ -141,9 +141,9 @@ export default {
           }
         } catch (error) {
           if (error.response && error.response.status === 404) {
-            console.warn("⚠️ ไม่พบข้อมูลผู้ใช้ใน Backend");
+            console.warn(" ไม่พบข้อมูลผู้ใช้ใน Backend");
           } else {
-            console.error("❌ เกิดข้อผิดพลาดในการเชื่อมต่อกับ API:", error);
+            console.error(" เกิดข้อผิดพลาดในการเชื่อมต่อกับ API:", error);
           }
         }
       } catch (error) {
@@ -158,7 +158,7 @@ export default {
     async handleSubmit() {
       if (this.isEditing) {
         if (!this.user.phone.match(/^[0-9]{9,10}$/)) {
-          alert("📵 กรุณากรอกเบอร์โทรให้ถูกต้อง (9-10 หลัก)");
+          alert(" กรุณากรอกเบอร์โทรให้ถูกต้อง (9-10 หลัก)");
           return;
         }
 
@@ -175,7 +175,7 @@ export default {
           setTimeout(() => (this.showSuccess = false), 3000);
         } catch (error) {
           console.error("Error updating profile:", error);
-          alert("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+          alert(" เกิดข้อผิดพลาดในการบันทึกข้อมูล");
         } finally {
           this.isEditing = false;
           this.isLoading = false;

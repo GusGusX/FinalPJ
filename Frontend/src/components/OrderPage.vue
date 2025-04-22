@@ -93,7 +93,7 @@
 
           <!-- ✅ แสดงจำนวนคงเหลือหรือสินค้าหมด -->
           <p :class="{'text-red-500 font-bold': product.quantity == 0, 'text-sm text-gray-500': product.quantity > 0}">
-            {{ product.quantity > 0 ? 'คงเหลือ: ' + product.quantity + ' กิโลกรัม' : '❌ สินค้าหมด' }}
+            {{ product.quantity > 0 ? 'คงเหลือ: ' + product.quantity + ' กิโลกรัม' : ' สินค้าหมด' }}
           </p>
 
           <div class="mt-4">
@@ -104,7 +104,6 @@
               class="w-full mt-2 border rounded-lg px-2 py-1"
               @input="filterInput(product)"
               @blur="validateQuantity(product)"
-              placeholder="เช่น 1.5"
               :disabled="product.quantity <= 0"
             />
 

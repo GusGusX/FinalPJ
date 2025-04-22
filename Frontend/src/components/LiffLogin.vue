@@ -28,7 +28,7 @@ import axios from 'axios';
 import { useRouter } from 'vue-router';
 
 const user = ref(null);
-const redirectPage = ref("หน้าหลัก"); // ใช้แสดงข้อความเปลี่ยนหน้า
+const redirectPage = ref();
 const router = useRouter();
 
 const login = async () => {

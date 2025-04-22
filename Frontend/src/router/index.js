@@ -4,7 +4,7 @@ import OrderHistory from '../components/OrderHistory.vue';
 import ProfilePage from '../components/ProfilePage.vue';
 import CheckoutPage from '../components/CheckoutPage.vue';
 import LiffLogin from '../components/LiffLogin.vue';
-import AdminDashboard from '../components/AdminDashboard.vue'; // ✅ เพิ่มหน้า Admin
+import AdminDashboard from '../components/AdminDashboard.vue';
 
 const routes = [
   {
@@ -36,7 +36,7 @@ const routes = [
     path: "/admin",
     name: "AdminDashboard",
     component: AdminDashboard,
-    meta: { requiresAdmin: true }, // ✅ กำหนดว่าเฉพาะ Admin เท่านั้นที่เข้าได้
+    meta: { requiresAdmin: true }, //Admin เท่านั้นที่เข้าได้
   }
 ];
 
@@ -45,7 +45,7 @@ const router = createRouter({
   routes,
 });
 
-// ✅ เพิ่ม Navigation Guard ตรวจสอบ Role ก่อนเข้า Admin
+//ตรวจสอบ Role ก่อนเข้า Admin
 router.beforeEach((to, from, next) => {
   const userRole = localStorage.getItem("userRole");
 
@@ -54,7 +54,7 @@ router.beforeEach((to, from, next) => {
     alert("❌ คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
     next("/home");
   } else {
-    next(); // ✅ ให้ผ่านไปตามปกติ
+    next(); 
   }
 });
 
