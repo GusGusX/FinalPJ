@@ -42,7 +42,13 @@
       <div class="space-y-4">
         <div>
           <label class="block text-lg font-medium text-gray-700">ชื่อผู้สั่งซื้อ</label>
-          <input v-model="customer_name" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500" placeholder="กรอกชื่อผู้สั่งซื้อ" />
+          <input
+            v-model="customer_name"
+            type="text"
+            readonly
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed"
+            placeholder="ชื่อผู้สั่งซื้อ"
+          />
         </div>
 
         <div>
@@ -221,7 +227,6 @@ export default {
     alert("กรุณาเลือกวิธีรับสินค้า");
     return;
   }
-
       const orderData = {
         user_id: this.user_id,
         customer_name: this.customer_name,

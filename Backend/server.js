@@ -46,12 +46,13 @@ app.get('/admin/statistics/revenue', async (req, res) => {
   }
 
   const query = `
-    SELECT oi.product_name, SUM(oi.price * oi.quantity) AS total_price
-    FROM orders o
-    JOIN order_items oi ON o.order_id = oi.order_id
-    WHERE 1=1 ${dateCondition}
-    GROUP BY oi.product_name
-  `;
+  SELECT oi.product_name, SUM(oi.price * oi.quantity) AS total_price
+  FROM orders o
+  JOIN order_items oi ON o.order_id = oi.order_id
+  JOIN payments p ON o.order_id = p.order_id
+  WHERE p.payment_status = 'จ่ายแล้ว' ${dateCondition}
+  GROUP BY oi.product_name
+`;
 
   db.query(query, values, (err, results) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -79,7 +80,6 @@ app.get('/admin/statistics/:userId', async (req, res) => {
   let dateCondition = '';
   const params = [userId];
 
-  // ✅ ถ้ามี start และ end → เพิ่มเงื่อนไขช่วงวันที่
   if (start && end) {
     dateCondition = 'AND DATE(o.order_date) BETWEEN ? AND ?';
     params.push(start, end);
@@ -89,8 +89,10 @@ app.get('/admin/statistics/:userId', async (req, res) => {
     SELECT oi.product_name, SUM(oi.quantity) AS total_quantity
     FROM orders o
     JOIN order_items oi ON o.order_id = oi.order_id
+    JOIN payments p ON o.order_id = p.order_id -- 🛠 เพิ่ม JOIN กับ payments
     WHERE o.user_id = ?
-    ${dateCondition}
+      AND p.payment_status = 'จ่ายแล้ว' 
+      ${dateCondition}
     GROUP BY oi.product_name
   `;
 
@@ -102,6 +104,7 @@ app.get('/admin/statistics/:userId', async (req, res) => {
     res.json({ labels, data });
   });
 });
+
 
 app.get('/userorders/statistics', async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -154,37 +157,26 @@ app.get('/userorders/statistics', async (req, res) => {
 });
 
 
-app.put("/orders/:id/payment", (req, res) => {
-  const { id } = req.params;
-  const { payment_status } = req.body;
+app.post("/payments", (req, res) => {
+  const { order_id, payment_status, payment_method, payment_date, amount } = req.body;
 
-  console.log(`📌 อัปเดต Payment Status: Order ID ${id} -> ${payment_status}`);
+  const sql = `
+    INSERT INTO payments (order_id, payment_status, payment_method, payment_date, amount)
+    VALUES (?, ?, ?, ?, ?)
+  `;
 
-  const sql = "UPDATE orders SET payment_status = ? WHERE order_id = ?";
-  
-  db.query(sql, [payment_status, id], (error, results) => {
+  db.query(sql, [order_id, payment_status, payment_method, payment_date, amount], (error, results) => {
     if (error) {
-      console.error("Error updating payment status:", error);
-      return res.status(500).json({ error: "Failed to update payment status" });
+      console.error("Error inserting payment:", error);
+      return res.status(500).json({ error: "Failed to record payment" });
     }
-
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    // ✅ ดึงข้อมูลอัปเดตกลับไปที่ Frontend
-    db.query("SELECT * FROM orders WHERE order_id = ?", [id], (err, updatedOrder) => {
-      if (err) {
-        console.error("Error fetching updated order:", err);
-        return res.status(500).json({ error: "Failed to fetch updated order" });
-      }
-      res.json({ success: true, message: " อัปเดตสถานะสำเร็จ", order: updatedOrder[0] });
-    });
+    res.json({ success: true, message: "บันทึกการชำระเงินสำเร็จ" });
   });
 });
 
+
 app.put('/orders/:orderId/delivery', async (req, res) => {
-  console.log("📝 Body ที่รับมา:", req.body);
+  console.log(" Body ที่รับมา:", req.body);
   const { user_id, customer_name,delivery_status, delivery_eta } = req.body;
   const orderId = req.params.orderId;
 
@@ -230,7 +222,7 @@ app.get("/orders", (req, res) => {
   const query = `
   SELECT 
     o.order_id,
-    o.payment_status,
+    p.payment_status,
     o.customer_name,
     o.phone,
     o.address,
@@ -247,6 +239,7 @@ app.get("/orders", (req, res) => {
       ) SEPARATOR ';'
     ) AS items
   FROM orders o
+  LEFT JOIN payments p ON o.order_id = p.order_id
   JOIN order_items oi ON o.order_id = oi.order_id
   GROUP BY o.order_id
   ORDER BY o.order_date DESC
@@ -304,7 +297,7 @@ app.get("/userorders", async (req, res) => {
     const query = `
       SELECT 
         o.order_id,
-        o.payment_status,
+        p.payment_status,
         o.customer_name,
         o.phone,
         o.address,
@@ -321,6 +314,7 @@ app.get("/userorders", async (req, res) => {
         ) AS items
       FROM orders o
       JOIN order_items oi ON o.order_id = oi.order_id
+      LEFT JOIN payments p ON o.order_id = p.order_id
       WHERE o.user_id = ?
       GROUP BY o.order_id
       ORDER BY o.order_date DESC
@@ -621,7 +615,7 @@ const headers = {
 
 // Function to send a message
 
-const createSimpleFlex  = (imageUrl, title, desc, link) => ({
+const createSimplexFle  = (imageUrl, title, desc, link) => ({
   type: 'flex',
   altText: `📢 โปรโมชันใหม่: ${title}`,
   contents: {

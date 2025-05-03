@@ -46,7 +46,7 @@
       <h1 class="text-2xl font-bold text-orange-700 mb-4" v-if="currentTab === 'orders'">ประวัติการสั่งซื้อ</h1>
 
       <div v-if="currentTab === 'promotion'">
-          <h2 class="text-2xl font-bold text-orange-700 mb-4">📢 ส่งโปรโมชั่นให้ลูกค้า</h2>
+          <h2 class="text-2xl font-bold text-orange-700 mb-4">ส่งโปรโมชั่นให้ลูกค้า</h2>
           <div class="bg-white p-6 rounded-lg shadow border-l-4 border-orange-400 max-w-3xl">
             <div class="mb-4">
               <label class="block text-gray-700 font-medium mb-1">เลือกลูกค้า</label>
@@ -81,7 +81,7 @@
             <button
               @click="sendPromotion"
               class="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded font-bold transition">
-              🚀 ส่งโปรโมชัน
+              ส่งโปรโมชัน
             </button>
 
             <p v-if="promotionStatus" class="mt-4 text-green-600 font-medium">{{ promotionStatus }}</p>
@@ -473,11 +473,11 @@ const updateDeliveryStatus = async (order) => {
       customer_name: order.customer_name
     });
 
-    console.log("✅ Delivery updated:", response.data);
-    alert("📦 อัปเดตสถานะการจัดส่งเรียบร้อยแล้ว!");
+    console.log(" Delivery updated:", response.data);
+    alert(" อัปเดตสถานะการจัดส่งเรียบร้อยแล้ว!");
   } catch (error) {
     console.error("Error updating delivery status:", error);
-    alert("❌ อัปเดตสถานะการจัดส่งล้มเหลว");
+    alert(" อัปเดตสถานะการจัดส่งล้มเหลว");
   }
 };
 
@@ -506,36 +506,26 @@ const togglePaymentStatus = async (order) => {
   }
 
   try {
-    const newStatus = order.payment_status === "จ่ายแล้ว" ? "ไม่จ่าย" : "จ่ายแล้ว";
-    console.log(`อัปเดต Payment Status: Order ID ${order.order_id} เป็น ${newStatus}`);
+    if (order.payment_status !== "จ่ายแล้ว") {
+      console.log(`📌 เพิ่มข้อมูลการชำระเงิน: Order ID ${order.order_id}`);
 
-    // อัปเดตสถานะการชำระเงินในตัวแปร frontend ทันที
-    order.payment_status = newStatus;
+      await axios.post(`${import.meta.env.VITE_API_URL}/payments`, {
+        order_id: order.order_id,
+        payment_status: "จ่ายแล้ว",
+        payment_method: "เก็บเงินปลายทาง", // ✅ กำหนดแบบตายตัว
+        amount: order.total_price,
+        payment_date: new Date().toISOString().slice(0, 19).replace('T', ' ') // ใช้เวลาปัจจุบัน
+      });
 
-    const response = await axios.put(`${import.meta.env.VITE_API_URL}/orders/${order.order_id}/payment`, {
-      payment_status: newStatus
-    });
-
-    if (response.status !== 200) {
-      throw new Error("API ไม่สามารถอัปเดตสถานะได้");
-    }
-
-    // เช็คข้อมูลที่ตอบกลับจาก API และสถานะการชำระเงินใน order
-    console.log("Response from API:", response.data);  // ตรวจสอบข้อมูลที่ได้จาก API
-
-    if (response.data.success && response.data.order.payment_status === newStatus) {
-      console.log("สถานะการชำระเงินอัปเดตสำเร็จใน API");
+      alert("บันทึกข้อมูลการชำระเงินเรียบร้อยแล้ว");
     } else {
-      throw new Error("ข้อมูลที่ได้จาก API ไม่ตรงกับที่คาดไว้");
+      alert("ออเดอร์นี้ชำระเงินแล้ว ไม่สามารถยกเลิกได้จากตรงนี้");
     }
 
-    // รีเฟรชข้อมูลการสั่งซื้อใหม่หลังจากอัปเดตสถานะสำเร็จ
-    await loadOrders(); // ใช้ loadOrders ที่อยู่ใน setup() ของ component
+    await loadOrders(); // รีโหลดข้อมูลใหม่
   } catch (error) {
     console.error("Error updating payment status:", error);
-
-    // ถ้ามีข้อผิดพลาด ให้ย้อนกลับสถานะการชำระเงินใน frontend
-    order.payment_status = order.payment_status === "จ่ายแล้ว" ? "ไม่จ่าย" : "จ่ายแล้ว";
+    alert("เกิดข้อผิดพลาดในการอัปเดตสถานะการชำระเงิน");
   }
 };
 
@@ -544,19 +534,6 @@ const formatDate = (dateString) => {
   if (!dateString) return "ไม่ทราบวันที่"; // กรณีไม่มีข้อมูล
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
   return new Date(dateString).toLocaleDateString('th-TH', options);
-};
-
-const fetchOrders = async () => {
-  try {
-    const response = await axios.get(import.meta.env.VITE_API_URL + "/orders");
-    orders.value = response.data.map(order => ({
-      ...order,
-      showDetails: false,
-      payment_status: order.payment_status || "ยังไม่จ่าย"
-    }));
-  } catch (error) {
-    console.error("Error fetching orders:", error);
-  }
 };
 
 const fetchProducts = async () => {
@@ -602,7 +579,6 @@ onMounted(() => {
   endDateSummary.value = today
   loadTotalSummary();
   fetchProducts();
-  fetchOrders();
   loadOrders();
   fetchUserList();
   setTimeout(() => {
